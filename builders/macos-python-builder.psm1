@@ -31,10 +31,10 @@ class macOSPythonBuilder : NixPythonBuilder {
         .SYNOPSIS
         Prepare system environment by installing dependencies and required packages.
         #>
-        
+
         if ($this.Version -eq "3.7.17") {
-            # We have preinstalled ncurses and readLine on the hoster runners. But we need to install bzip2 for 
-            # setting up an environemnt 
+            # We have preinstalled ncurses and readLine on the hoster runners. But we need to install bzip2 for
+            # setting up an environemnt
             # If we get any issues realted to ncurses or readline we can try to run this command
             # brew install ncurses readline
             Execute-Command -Command "brew install bzip2"
@@ -151,6 +151,28 @@ class macOSPythonBuilder : NixPythonBuilder {
         return $pkgLocation
     }
 
+    [bool] PkgExists() {
+        <#
+        .SYNOPSIS
+        Checks if the Universal Pkg Uri actually exists.
+        #>
+        $pkgUri = $this.GetPkgUri()
+
+        try {
+            $statusCode = (Invoke-WebRequest -Uri $pkgUri -UseBasicParsing -DisableKeepAlive -Method head).StatusCode
+            if ($statusCode -eq 200) {
+                return $true
+            } else {
+                Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
+                return $false;
+            }
+        } catch {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
+            return $false
+        }
+    }
+
     [void] CreateInstallationScriptPkg() {
         <#
         .SYNOPSIS
@@ -180,7 +202,7 @@ class macOSPythonBuilder : NixPythonBuilder {
 
         $PkgVersion = [semver]"3.11.0-beta.1"
 
-        if (($this.Version -ge $PkgVersion) -or ($this.Architecture -eq "arm64")) {
+        if ((($this.Version -ge $PkgVersion) -or ($this.Architecture -eq "arm64")) -and ($this.PkgExists()))  {
             Write-Host "Download Python $($this.Version) [$($this.Architecture)] package..."
             $this.DownloadPkg()
 
