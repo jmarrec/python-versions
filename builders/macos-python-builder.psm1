@@ -105,128 +105,95 @@ class macOSPythonBuilder : NixPythonBuilder {
         Execute-Command -Command $configureString
     }
 
-    [string] GetPkgName() {
-        <#
-        .SYNOPSIS
-        Return Python installation Package.
-        #>
-
-        $nativeVersion = Convert-Version -version $this.Version
-        $architecture = "-macos11"
-        $extension = ".pkg"
-
-        $pkg = "python-${nativeVersion}${architecture}${extension}"
-
-        return $pkg
-    }
-
-    [uri] GetPkgUri() {
-        <#
-        .SYNOPSIS
-        Get base Python URI and return complete URI for Python installation package.
-        #>
-
-        $base = $this.GetBaseUri()
-        $versionName = $this.GetBaseVersion()
-        $pkg = $this.GetPkgName()
-
-        $uri = "${base}/${versionName}/${pkg}"
-
-        return $uri
-    }
-
-    [string] DownloadPkg() {
-        <#
-        .SYNOPSIS
-        Download Python installation executable into artifact location.
-        #>
-
-        $pkgUri = $this.GetPkgUri()
-
-        Write-Host "Sources URI: $pkgUri"
-        $pkgLocation = Download-File -Uri $pkgUri -OutputFolder $this.WorkFolderLocation
-        Write-Debug "Done; Package location: $pkgLocation"
-
-        New-Item -Path $this.WorkFolderLocation -Name "build_output.txt"  -ItemType File
-        return $pkgLocation
-    }
-
-    [string] GetFrameworkName() {
-        <#
-        .SYNOPSIS
-        Get the Python installation Package name.
-        #>
-
-        if ($this.IsFreeThreaded()) {
-            return "PythonT.framework"
-        } else {
-            return "Python.framework"
-        }
-    }
-
-    [string] GetPkgChoices() {
-        <#
-        .SYNOPSIS
-        Reads the configuration XML file for the Python installer
-        #>
-
-        $config = if ($this.IsFreeThreaded()) { "freethreaded" } else { "default" }
-        $choicesFile = Join-Path $PSScriptRoot "../config/macos-pkg-choices-$($config).xml"
-        $choicesTemplate = Get-Content -Path $choicesFile -Raw
-
-        $variablesToReplace = @{
-            "{{__VERSION_MAJOR_MINOR__}}" = "$($this.Version.Major).$($this.Version.Minor)";
-        }
-
-        $variablesToReplace.keys | ForEach-Object { $choicesTemplate = $choicesTemplate.Replace($_, $variablesToReplace[$_]) }
-        return $choicesTemplate
-    }
-
-    [bool] PkgExists() {
-        <#
-        .SYNOPSIS
-        Checks if the Universal Pkg Uri actually exists.
-        #>
-        $pkgUri = $this.GetPkgUri()
-
-        try {
-            $statusCode = (Invoke-WebRequest -Uri $pkgUri -UseBasicParsing -DisableKeepAlive -Method head).StatusCode
-            if ($statusCode -eq 200) {
-                return $true
-            } else {
-                Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
-                return $false;
-            }
-        } catch {
-            $statusCode = [int]$_.Exception.Response.StatusCode
-            Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
-            return $false
-        }
-    }
-
-    [void] CreateInstallationScriptPkg() {
-        <#
-        .SYNOPSIS
-        Create Python artifact installation script based on specified template.
-        #>
-
-        $installationTemplateLocation = Join-Path -Path $this.InstallationTemplatesLocation -ChildPath "macos-pkg-setup-template.sh"
-        $installationTemplateContent = Get-Content -Path $installationTemplateLocation -Raw
-        $installationScriptLocation = New-Item -Path $this.WorkFolderLocation -Name $this.InstallationScriptName  -ItemType File
-
-        $variablesToReplace = @{
-            "{{__VERSION_FULL__}}" = $this.Version;
-            "{{__PKG_NAME__}}" = $this.GetPkgName();
-            "{{__ARCH__}}" = $this.Architecture;
-            "{{__FRAMEWORK_NAME__}}" = $this.GetFrameworkName();
-            "{{__PKG_CHOICES__}}" = $this.GetPkgChoices();
-        }
-
-        $variablesToReplace.keys | ForEach-Object { $installationTemplateContent = $installationTemplateContent.Replace($_, $variablesToReplace[$_]) }
-        $installationTemplateContent | Out-File -FilePath $installationScriptLocation
-        Write-Debug "Done; Installation script location: $installationScriptLocation)"
-    }
-
+#    [string] GetPkgName() {
+#        <#
+#        .SYNOPSIS
+#        Return Python installation Package.
+#        #>
+#
+#        $nativeVersion = Convert-Version -version $this.Version
+#        $architecture = "-macos11"
+#        $extension = ".pkg"
+#
+#        $pkg = "python-${nativeVersion}${architecture}${extension}"
+#
+#        return $pkg
+#    }
+#
+#    [uri] GetPkgUri() {
+#        <#
+#        .SYNOPSIS
+#        Get base Python URI and return complete URI for Python installation package.
+#        #>
+#
+#        $base = $this.GetBaseUri()
+#        $versionName = $this.GetBaseVersion()
+#        $pkg = $this.GetPkgName()
+#
+#        $uri = "${base}/${versionName}/${pkg}"
+#
+#        return $uri
+#    }
+#
+#    [string] DownloadPkg() {
+#        <#
+#        .SYNOPSIS
+#        Download Python installation executable into artifact location.
+#        #>
+#
+#        $pkgUri = $this.GetPkgUri()
+#
+#        Write-Host "Sources URI: $pkgUri"
+#        $pkgLocation = Download-File -Uri $pkgUri -OutputFolder $this.WorkFolderLocation
+#        Write-Debug "Done; Package location: $pkgLocation"
+#
+#        New-Item -Path $this.WorkFolderLocation -Name "build_output.txt"  -ItemType File
+#        return $pkgLocation
+#    }
+#
+#    [bool] PkgExists() {
+#        <#
+#        .SYNOPSIS
+#        Checks if the Universal Pkg Uri actually exists.
+#        #>
+#        $pkgUri = $this.GetPkgUri()
+#
+#        try {
+#            $statusCode = (Invoke-WebRequest -Uri $pkgUri -UseBasicParsing -DisableKeepAlive -Method head).StatusCode
+#            if ($statusCode -eq 200) {
+#                return $true
+#            } else {
+#                Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
+#                return $false;
+#            }
+#        } catch {
+#            $statusCode = [int]$_.Exception.Response.StatusCode
+#            Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
+#            return $false
+#        }
+#    }
+#
+#    [void] CreateInstallationScriptPkg() {
+#        <#
+#        .SYNOPSIS
+#        Create Python artifact installation script based on specified template.
+#        #>
+#
+#        $installationTemplateLocation = Join-Path -Path $this.InstallationTemplatesLocation -ChildPath "macos-pkg-setup-template.sh"
+#        $installationTemplateContent = Get-Content -Path $installationTemplateLocation -Raw
+#        $installationScriptLocation = New-Item -Path $this.WorkFolderLocation -Name $this.InstallationScriptName  -ItemType File
+#
+#        $variablesToReplace = @{
+#            "{{__VERSION_FULL__}}" = $this.Version;
+#            "{{__PKG_NAME__}}" = $this.GetPkgName();
+#            "{{__ARCH__}}" = $this.Architecture;
+#        }
+#
+#        $variablesToReplace.keys | ForEach-Object { $installationTemplateContent = $installationTemplateContent.Replace($_, $variablesToReplace[$_]) }
+#        $installationTemplateContent | Out-File -FilePath $installationScriptLocation
+#        Write-Debug "Done; Installation script location: $installationScriptLocation)"
+#    }
+#
 #    [void] Build() {
 #        <#
 #        .SYNOPSIS
