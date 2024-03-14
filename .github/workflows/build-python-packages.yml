@@ -140,7 +140,7 @@ jobs:
         working-directory: ${{ runner.temp }}/${{ env.ARTIFACT_NAME }}
 
       - name: Setup Python ${{ env.VERSION }}
-        uses: actions/setup-python@v5
+        uses: jmarrec/setup-python@v5
         with:
           python-version: ${{ env.VERSION }}
           architecture: ${{ matrix.arch }}
