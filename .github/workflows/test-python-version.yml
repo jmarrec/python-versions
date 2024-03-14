@@ -20,7 +20,7 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-20.04, ubuntu-22.04, ubuntu-latest, macos-13] 
     steps:
     - name: Setup Python ${{ github.event.inputs.version }}
-      uses: actions/setup-python@main
+      uses: jmarrec/setup-python@main
       with:
         python-version: ${{ github.event.inputs.version }}
         architecture: ${{ github.event.inputs.architecture }}
