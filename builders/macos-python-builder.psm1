@@ -227,25 +227,25 @@ class macOSPythonBuilder : NixPythonBuilder {
         Write-Debug "Done; Installation script location: $installationScriptLocation)"
     }
 
-    [void] Build() {
-        <#
-        .SYNOPSIS
-        Generates Python artifact from downloaded Python installation executable.
-        #>
-
-        $PkgVersion = [semver]"3.11.0-beta.1"
-
-        if ((($this.Version -ge $PkgVersion) -or ($this.Architecture -eq "arm64")) -and ($this.PkgExists()))  {
-            Write-Host "Download Python $($this.Version) [$($this.Architecture)] package..."
-            $this.DownloadPkg()
-
-            Write-Host "Create installation script..."
-            $this.CreateInstallationScriptPkg()
-        } else {
-            ([NixPythonBuilder]$this).Build()
-        }
-
-        Write-Host "Archive artifact"
-        $this.ArchiveArtifact()
-    }
+#    [void] Build() {
+#        <#
+#        .SYNOPSIS
+#        Generates Python artifact from downloaded Python installation executable.
+#        #>
+#
+#        $PkgVersion = [semver]"3.11.0-beta.1"
+#
+#        if ((($this.Version -ge $PkgVersion) -or ($this.Architecture -eq "arm64")) -and ($this.PkgExists()))  {
+#            Write-Host "Download Python $($this.Version) [$($this.Architecture)] package..."
+#            $this.DownloadPkg()
+#
+#            Write-Host "Create installation script..."
+#            $this.CreateInstallationScriptPkg()
+#        } else {
+#            ([NixPythonBuilder]$this).Build()
+#        }
+#
+#        Write-Host "Archive artifact"
+#        $this.ArchiveArtifact()
+#    }
 }
