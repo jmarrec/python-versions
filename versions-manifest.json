@@ -2,26 +2,26 @@
   {
     "version": "3.12.2",
     "stable": true,
-    "release_url": "https://github.com/jmarrec/python-versions/releases/tag/3.12.2-8290038909",
+    "release_url": "https://github.com/jmarrec/python-versions/releases/tag/3.12.2-8292999650",
     "files": [
       {
         "filename": "python-3.12.2-darwin-arm64.tar.gz",
         "arch": "arm64",
         "platform": "darwin",
-        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8290038909/python-3.12.2-darwin-arm64.tar.gz"
+        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8292999650/python-3.12.2-darwin-arm64.tar.gz"
       },
       {
         "filename": "python-3.12.2-darwin-x64.tar.gz",
         "arch": "x64",
         "platform": "darwin",
-        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8290038909/python-3.12.2-darwin-x64.tar.gz"
+        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8292999650/python-3.12.2-darwin-x64.tar.gz"
       },
       {
         "filename": "python-3.12.2-linux-20.04-x64.tar.gz",
         "arch": "x64",
         "platform": "linux",
         "platform_version": "20.04",
-        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8290038909/python-3.12.2-linux-20.04-x64.tar.gz"
+        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8292999650/python-3.12.2-linux-20.04-x64.tar.gz"
       },
       {
         "filename": "python-3.12.2-linux-22.04-arm64.tar.gz",
@@ -35,7 +35,7 @@
         "arch": "x64",
         "platform": "linux",
         "platform_version": "22.04",
-        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8290038909/python-3.12.2-linux-22.04-x64.tar.gz"
+        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8292999650/python-3.12.2-linux-22.04-x64.tar.gz"
       },
       {
         "filename": "python-3.12.2-linux-24.04-arm64.tar.gz",
@@ -61,13 +61,13 @@
         "filename": "python-3.12.2-win32-x64.zip",
         "arch": "x64",
         "platform": "win32",
-        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8290038909/python-3.12.2-win32-x64.zip"
+        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8292999650/python-3.12.2-win32-x64.zip"
       },
       {
         "filename": "python-3.12.2-win32-x86.zip",
         "arch": "x86",
         "platform": "win32",
-        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8290038909/python-3.12.2-win32-x86.zip"
+        "download_url": "https://github.com/jmarrec/python-versions/releases/download/3.12.2-8292999650/python-3.12.2-win32-x86.zip"
       }
     ]
   },
