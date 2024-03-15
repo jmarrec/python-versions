@@ -54,6 +54,9 @@ class macOSPythonBuilder : NixPythonBuilder {
         $configureString += " --enable-shared"
         $configureString += " --with-lto"
 
+        # Configure may detect libintl from non-system sources, such as Homebrew (it **does** on macos arm64) so turn it off
+        $configureString += " ac_cv_lib_intl_textdomain=no"
+
         ### For Python versions which support it, compile a universal2 (arm64 + x86_64 hybrid) build. The arm64 slice
         ### will never be used itself by a Github Actions runner but using a universal2 Python is the only way to build
         ### universal2 C extensions and wheels. This is supported by Python >= 3.10 and was backported to Python >=
