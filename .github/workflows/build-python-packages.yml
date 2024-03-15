@@ -5,7 +5,7 @@ on:
     inputs:
       VERSION:
         description: 'Python version to build and upload'
-        default: '3.12.3'
+        default: '3.12.2'
         required: true
       PUBLISH_RELEASES:
         description: 'Whether to publish releases'
