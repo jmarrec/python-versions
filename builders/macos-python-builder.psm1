@@ -54,12 +54,6 @@ class macOSPythonBuilder : NixPythonBuilder {
         $configureString += " --enable-shared"
         $configureString += " --with-lto"
 
-        # Configure may detect libintl from non-system sources, such as Homebrew (it **does** on macos arm64) so turn it off
-        # $configureString += " ac_cv_lib_intl_textdomain=no"
-        # This has libintl.a in there, so hopefully it picks it up
-        $env:LDFLAGS = "-L$(brew --prefix gettext)/lib"
-        $env:CFLAGS = "-I$(brew --prefix gettext)/include"
-
         ### For Python versions which support it, compile a universal2 (arm64 + x86_64 hybrid) build. The arm64 slice
         ### will never be used itself by a Github Actions runner but using a universal2 Python is the only way to build
         ### universal2 C extensions and wheels. This is supported by Python >= 3.10 and was backported to Python >=
@@ -79,17 +73,28 @@ class macOSPythonBuilder : NixPythonBuilder {
         } else {
             $configureString += " --with-openssl=$(brew --prefix openssl@1.1)"
 
+            # Configure may detect libintl from non-system sources, such as Homebrew (it **does** on macos arm64) so turn it off
+            # $configureString += " ac_cv_lib_intl_textdomain=no"
+            # This has libintl.a in there, so hopefully it picks it up
+            $env:LDFLAGS = "-L$(brew --prefix gettext)/lib"
+            $env:CFLAGS = "-I$(brew --prefix gettext)/include"
+
             # For Python 3.7.2 and 3.7.3 we need to provide PATH for zlib to pack it properly. Otherwise the build will fail
             # with the error: zipimport.ZipImportError: can't decompress data; zlib not available
             if ($this.Version -eq "3.7.2" -or $this.Version -eq "3.7.3" -or $this.Version -eq "3.7.17") {
-                $env:LDFLAGS = "-L$(brew --prefix zlib)/lib"
-                $env:CFLAGS = "-I$(brew --prefix zlib)/include"
+                $env:LDFLAGS += " -L$(brew --prefix zlib)/lib"
+                $env:CFLAGS += " -I$(brew --prefix zlib)/include"
             }
 
             if ($this.Version -ge "3.11.0") {
                 # Python 3.11+: configure: WARNING: unrecognized options: --with-tcltk-includes, --with-tcltk-libs
                 # https://github.com/python/cpython/blob/762f489b31afe0f0589aa784bf99c752044e7f30/Doc/whatsnew/3.11.rst#L2167-L2172
-                $env:TCLTK_CFLAGS = "-I$(brew --prefix tcl-tk)/include"
+                $tcl_inc_dir = "$(brew --prefix tcl-tk)/include"
+                # In Homebrew Tcl/Tk 8.6.13, headers have been moved to the 'tcl-tk' subdir
+                if (Test-Path -Path "$tcl_inc_dir/tcl-tk") {
+                    $tcl_inc_dir = "$tcl_inc_dir/tcl-tk"
+                }
+                $env:TCLTK_CFLAGS = "-I$tcl_inc_dir"
                 $env:TCLTK_LIBS = "-L$(brew --prefix tcl-tk)/lib -ltcl8.6 -ltk8.6"
             } elseif ($this.Version -gt "3.7.12") {
                 $configureString += " --with-tcltk-includes='-I $(brew --prefix tcl-tk)/include' --with-tcltk-libs='-L$(brew --prefix tcl-tk)/lib -ltcl8.6 -ltk8.6'"
