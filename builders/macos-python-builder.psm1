@@ -86,9 +86,14 @@ class macOSPythonBuilder : NixPythonBuilder {
                 $env:CFLAGS = "-I$(brew --prefix zlib)/include"
             }
 
-            if ($this.Version -gt "3.7.12") {
+            if ($this.Version -ge "3.11.0") {
+                # Python 3.11+: configure: WARNING: unrecognized options: --with-tcltk-includes, --with-tcltk-libs
+                # https://github.com/python/cpython/blob/762f489b31afe0f0589aa784bf99c752044e7f30/Doc/whatsnew/3.11.rst#L2167-L2172
+                $env:TCLTK_CFLAGS = "-I$(brew --prefix tcl-tk)/include"
+                $env:TCLTK_LIBS = "-L$(brew --prefix tcl-tk)/lib -ltcl8.6 -ltk8.6"
+            } elseif ($this.Version -gt "3.7.12") {
                 $configureString += " --with-tcltk-includes='-I $(brew --prefix tcl-tk)/include' --with-tcltk-libs='-L$(brew --prefix tcl-tk)/lib -ltcl8.6 -ltk8.6'"
-	        }
+            }
 
             if ($this.Version -eq "3.7.17") {
                 $env:LDFLAGS += " -L$(brew --prefix bzip2)/lib -L$(brew --prefix readline)/lib -L$(brew --prefix ncurses)/lib"
@@ -111,6 +116,8 @@ class macOSPythonBuilder : NixPythonBuilder {
         Write-Host "CFLAGS='$env:CFLAGS'"
         Write-Host "CPPFLAGS='$env:CPPFLAGS'"
         Write-Host "LDFLAGS='$env:LDFLAGS'"
+        Write-Host "TCLTK_CFLAGS='$env:TCLTK_CFLAGS'"
+        Write-Host "TCLTK_LIBS='$env:TCLTK_LIBS'"
 
         Execute-Command -Command $configureString
     }
