@@ -64,6 +64,8 @@ class UbuntuPythonBuilder : NixPythonBuilder {
         Execute-Command -Command "sudo apt-get update"
         Execute-Command -Command $tkinterInstallString
 
+        $orig_needrestart_ui = $env:NEEDRESTART_UI
+        $env:NEEDRESTART_UI = "NeedRestart::UI::Debconf"
         ### Install dependent packages
         @(
             "make",
@@ -79,6 +81,7 @@ class UbuntuPythonBuilder : NixPythonBuilder {
         ) | ForEach-Object {
             Execute-Command -Command "sudo apt install -y $_"
         }
+        $env:NEEDRESTART_UI = $orig_needrestart_ui
 
         ### On Ubuntu-1804, libgdbm-compat-dev has older modules that are no longer in libgdbm-dev
         Execute-Command -Command "sudo apt install -y libgdbm-compat-dev"
