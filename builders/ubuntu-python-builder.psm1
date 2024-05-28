@@ -76,6 +76,7 @@ class UbuntuPythonBuilder : NixPythonBuilder {
         $orig_debian_frontend = $env:DEBIAN_FRONTEND
         $env:DEBIAN_FRONTEND="noninteractive"
 
+        Execute-Command -Command "sudo apt remove needrestart"
         ### Install dependent packages
         @(
             "make",
