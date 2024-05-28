@@ -72,6 +72,10 @@ class UbuntuPythonBuilder : NixPythonBuilder {
 
         $orig_needrestart_suspend = $env:NEEDRESTART_SUSPEND
         $env:NEEDRESTART_SUSPEND = "y"
+
+        $orig_debian_frontend = $env:DEBIAN_FRONTEND
+        $env:DEBIAN_FRONTEND="noninteractive"
+
         ### Install dependent packages
         @(
             "make",
@@ -87,9 +91,11 @@ class UbuntuPythonBuilder : NixPythonBuilder {
         ) | ForEach-Object {
             Execute-Command -Command "sudo apt install -y $_"
         }
+
         $env:NEEDRESTART_UI = $orig_needrestart_ui
         $env:NEEDRESTART_MODE = $orig_needrestart_mode
         $env:NEEDRESTART_SUSPEND = $orig_needrestart_suspend
+        $env:DEBIAN_FRONTEND = $orig_debian_frontend
 
         ### On Ubuntu-1804, libgdbm-compat-dev has older modules that are no longer in libgdbm-dev
         Execute-Command -Command "sudo apt install -y libgdbm-compat-dev"
