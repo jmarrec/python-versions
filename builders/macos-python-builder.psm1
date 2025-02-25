@@ -31,10 +31,10 @@ class macOSPythonBuilder : NixPythonBuilder {
         .SYNOPSIS
         Prepare system environment by installing dependencies and required packages.
         #>
-        
+
         if ($this.Version -eq "3.7.17") {
-            # We have preinstalled ncurses and readLine on the hoster runners. But we need to install bzip2 for 
-            # setting up an environemnt 
+            # We have preinstalled ncurses and readLine on the hoster runners. But we need to install bzip2 for
+            # setting up an environemnt
             # If we get any issues realted to ncurses or readline we can try to run this command
             # brew install ncurses readline
             Execute-Command -Command "brew install bzip2"
@@ -68,21 +68,37 @@ class macOSPythonBuilder : NixPythonBuilder {
         ### and then add the appropriate paths for the header and library files to configure command.
         ### Link to documentation (https://cpython-devguide.readthedocs.io/setup/#build-dependencies)
         if ($this.Version -lt "3.7.0") {
-            $env:LDFLAGS = "-L/usr/local/opt/openssl@1.1/lib -L/usr/local/opt/zlib/lib"
-            $env:CFLAGS = "-I/usr/local/opt/openssl@1.1/include -I/usr/local/opt/zlib/include"
+            $env:LDFLAGS = "-L$(brew --prefix openssl@1.1)/lib -L$(brew --prefix zlib)/lib"
+            $env:CFLAGS = "-I$(brew --prefix openssl@1.1)/include -I$(brew --prefix zlib)/include"
         } else {
-            $configureString += " --with-openssl=/usr/local/opt/openssl@1.1"
+            $configureString += " --with-openssl=$(brew --prefix openssl@1.1)"
+
+            # Configure may detect libintl from non-system sources, such as Homebrew (it **does** on macos arm64) so turn it off
+            # $configureString += " ac_cv_lib_intl_textdomain=no"
+            # This has libintl.a in there, so hopefully it picks it up
+            $env:LDFLAGS = "-L$(brew --prefix gettext)/lib"
+            $env:CFLAGS = "-I$(brew --prefix gettext)/include"
 
             # For Python 3.7.2 and 3.7.3 we need to provide PATH for zlib to pack it properly. Otherwise the build will fail
             # with the error: zipimport.ZipImportError: can't decompress data; zlib not available
             if ($this.Version -eq "3.7.2" -or $this.Version -eq "3.7.3" -or $this.Version -eq "3.7.17") {
-                $env:LDFLAGS = "-L/usr/local/opt/zlib/lib"
-                $env:CFLAGS = "-I/usr/local/opt/zlib/include"
+                $env:LDFLAGS += " -L$(brew --prefix zlib)/lib"
+                $env:CFLAGS += " -I$(brew --prefix zlib)/include"
             }
 
-            if ($this.Version -gt "3.7.12") {
-                $configureString += " --with-tcltk-includes='-I /usr/local/opt/tcl-tk/include' --with-tcltk-libs='-L/usr/local/opt/tcl-tk/lib -ltcl8.6 -ltk8.6'"
-	        }
+            if ($this.Version -ge "3.11.0") {
+                # Python 3.11+: configure: WARNING: unrecognized options: --with-tcltk-includes, --with-tcltk-libs
+                # https://github.com/python/cpython/blob/762f489b31afe0f0589aa784bf99c752044e7f30/Doc/whatsnew/3.11.rst#L2167-L2172
+                $tcl_inc_dir = "$(brew --prefix tcl-tk)/include"
+                # In Homebrew Tcl/Tk 8.6.13, headers have been moved to the 'tcl-tk' subdir
+                if (Test-Path -Path "$tcl_inc_dir/tcl-tk") {
+                    $tcl_inc_dir = "$tcl_inc_dir/tcl-tk"
+                }
+                $env:TCLTK_CFLAGS = "-I$tcl_inc_dir"
+                $env:TCLTK_LIBS = "-L$(brew --prefix tcl-tk)/lib -ltcl8.6 -ltk8.6"
+            } elseif ($this.Version -gt "3.7.12") {
+                $configureString += " --with-tcltk-includes='-I $(brew --prefix tcl-tk)/include' --with-tcltk-libs='-L$(brew --prefix tcl-tk)/lib -ltcl8.6 -ltk8.6'"
+            }
 
             if ($this.Version -eq "3.7.17") {
                 $env:LDFLAGS += " -L$(brew --prefix bzip2)/lib -L$(brew --prefix readline)/lib -L$(brew --prefix ncurses)/lib"
@@ -101,96 +117,124 @@ class macOSPythonBuilder : NixPythonBuilder {
 
         Write-Host "The passed configure options are: "
         Write-Host $configureString
+        Write-Host "Flags: "
+        Write-Host "CFLAGS='$env:CFLAGS'"
+        Write-Host "CPPFLAGS='$env:CPPFLAGS'"
+        Write-Host "LDFLAGS='$env:LDFLAGS'"
+        Write-Host "TCLTK_CFLAGS='$env:TCLTK_CFLAGS'"
+        Write-Host "TCLTK_LIBS='$env:TCLTK_LIBS'"
 
         Execute-Command -Command $configureString
     }
 
-    [string] GetPkgName() {
-        <#
-        .SYNOPSIS
-        Return Python installation Package.
-        #>
-
-        $nativeVersion = Convert-Version -version $this.Version
-        $architecture = "-macos11"
-        $extension = ".pkg"
-
-        $pkg = "python-${nativeVersion}${architecture}${extension}"
-
-        return $pkg
-    }
-
-    [uri] GetPkgUri() {
-        <#
-        .SYNOPSIS
-        Get base Python URI and return complete URI for Python installation package.
-        #>
-
-        $base = $this.GetBaseUri()
-        $versionName = $this.GetBaseVersion()
-        $pkg = $this.GetPkgName()
-
-        $uri = "${base}/${versionName}/${pkg}"
-
-        return $uri
-    }
-
-    [string] DownloadPkg() {
-        <#
-        .SYNOPSIS
-        Download Python installation executable into artifact location.
-        #>
-
-        $pkgUri = $this.GetPkgUri()
-
-        Write-Host "Sources URI: $pkgUri"
-        $pkgLocation = Download-File -Uri $pkgUri -OutputFolder $this.WorkFolderLocation
-        Write-Debug "Done; Package location: $pkgLocation"
-
-        New-Item -Path $this.WorkFolderLocation -Name "build_output.txt"  -ItemType File
-        return $pkgLocation
-    }
-
-    [void] CreateInstallationScriptPkg() {
-        <#
-        .SYNOPSIS
-        Create Python artifact installation script based on specified template.
-        #>
-
-        $installationTemplateLocation = Join-Path -Path $this.InstallationTemplatesLocation -ChildPath "macos-pkg-setup-template.sh"
-        $installationTemplateContent = Get-Content -Path $installationTemplateLocation -Raw
-        $installationScriptLocation = New-Item -Path $this.WorkFolderLocation -Name $this.InstallationScriptName  -ItemType File
-
-        $variablesToReplace = @{
-            "{{__VERSION_FULL__}}" = $this.Version;
-            "{{__PKG_NAME__}}" = $this.GetPkgName();
-            "{{__ARCH__}}" = $this.Architecture;
-        }
-
-        $variablesToReplace.keys | ForEach-Object { $installationTemplateContent = $installationTemplateContent.Replace($_, $variablesToReplace[$_]) }
-        $installationTemplateContent | Out-File -FilePath $installationScriptLocation
-        Write-Debug "Done; Installation script location: $installationScriptLocation)"
-    }
-
-    [void] Build() {
-        <#
-        .SYNOPSIS
-        Generates Python artifact from downloaded Python installation executable.
-        #>
-
-        $PkgVersion = [semver]"3.11.0-beta.1"
-
-        if (($this.Version -ge $PkgVersion) -or ($this.Architecture -eq "arm64")) {
-            Write-Host "Download Python $($this.Version) [$($this.Architecture)] package..."
-            $this.DownloadPkg()
-
-            Write-Host "Create installation script..."
-            $this.CreateInstallationScriptPkg()
-        } else {
-            ([NixPythonBuilder]$this).Build()
-        }
-
-        Write-Host "Archive artifact"
-        $this.ArchiveArtifact()
-    }
+#    [string] GetPkgName() {
+#        <#
+#        .SYNOPSIS
+#        Return Python installation Package.
+#        #>
+#
+#        $nativeVersion = Convert-Version -version $this.Version
+#        $architecture = "-macos11"
+#        $extension = ".pkg"
+#
+#        $pkg = "python-${nativeVersion}${architecture}${extension}"
+#
+#        return $pkg
+#    }
+#
+#    [uri] GetPkgUri() {
+#        <#
+#        .SYNOPSIS
+#        Get base Python URI and return complete URI for Python installation package.
+#        #>
+#
+#        $base = $this.GetBaseUri()
+#        $versionName = $this.GetBaseVersion()
+#        $pkg = $this.GetPkgName()
+#
+#        $uri = "${base}/${versionName}/${pkg}"
+#
+#        return $uri
+#    }
+#
+#    [string] DownloadPkg() {
+#        <#
+#        .SYNOPSIS
+#        Download Python installation executable into artifact location.
+#        #>
+#
+#        $pkgUri = $this.GetPkgUri()
+#
+#        Write-Host "Sources URI: $pkgUri"
+#        $pkgLocation = Download-File -Uri $pkgUri -OutputFolder $this.WorkFolderLocation
+#        Write-Debug "Done; Package location: $pkgLocation"
+#
+#        New-Item -Path $this.WorkFolderLocation -Name "build_output.txt"  -ItemType File
+#        return $pkgLocation
+#    }
+#
+#    [bool] PkgExists() {
+#        <#
+#        .SYNOPSIS
+#        Checks if the Universal Pkg Uri actually exists.
+#        #>
+#        $pkgUri = $this.GetPkgUri()
+#
+#        try {
+#            $statusCode = (Invoke-WebRequest -Uri $pkgUri -UseBasicParsing -DisableKeepAlive -Method head).StatusCode
+#            if ($statusCode -eq 200) {
+#                return $true
+#            } else {
+#                Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
+#                return $false;
+#            }
+#        } catch {
+#            $statusCode = [int]$_.Exception.Response.StatusCode
+#            Write-Host "File at $pkgUri did not appear to be valid, with status code '$statusCode'"
+#            return $false
+#        }
+#    }
+#
+#    [void] CreateInstallationScriptPkg() {
+#        <#
+#        .SYNOPSIS
+#        Create Python artifact installation script based on specified template.
+#        #>
+#
+#        $installationTemplateLocation = Join-Path -Path $this.InstallationTemplatesLocation -ChildPath "macos-pkg-setup-template.sh"
+#        $installationTemplateContent = Get-Content -Path $installationTemplateLocation -Raw
+#        $installationScriptLocation = New-Item -Path $this.WorkFolderLocation -Name $this.InstallationScriptName  -ItemType File
+#
+#        $variablesToReplace = @{
+#            "{{__VERSION_FULL__}}" = $this.Version;
+#            "{{__PKG_NAME__}}" = $this.GetPkgName();
+#            "{{__ARCH__}}" = $this.Architecture;
+#        }
+#
+#        $variablesToReplace.keys | ForEach-Object { $installationTemplateContent = $installationTemplateContent.Replace($_, $variablesToReplace[$_]) }
+#        $installationTemplateContent | Out-File -FilePath $installationScriptLocation
+#        Write-Debug "Done; Installation script location: $installationScriptLocation)"
+#    }
+#
+#    [void] Build() {
+#        <#
+#        .SYNOPSIS
+#        Generates Python artifact from downloaded Python installation executable.
+#        #>
+#
+#        $PkgVersion = [semver]"3.11.0-beta.1"
+#
+#        if ((($this.Version -ge $PkgVersion) -or ($this.Architecture -eq "arm64")) -and ($this.PkgExists()))  {
+#            Write-Host "Download Python $($this.Version) [$($this.Architecture)] package..."
+#            $this.DownloadPkg()
+#
+#            Write-Host "Create installation script..."
+#            $this.CreateInstallationScriptPkg()
+#        } else {
+#            ([NixPythonBuilder]$this).Build()
+#        }
+#
+#        Write-Host "Archive artifact"
+#        $this.ArchiveArtifact()
+#    }
 }
