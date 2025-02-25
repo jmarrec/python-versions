@@ -1,6 +1,5 @@
 set -e
 
-ARCH="{{__ARCH__}}"
 PYTHON_FULL_VERSION="{{__VERSION_FULL__}}"
 ARCH="{{__ARCH__}}"
 MAJOR_VERSION=$(echo $PYTHON_FULL_VERSION | cut -d '.' -f 1)
